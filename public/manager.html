@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickBill - Central Manager Dashboard & Audit Monitor</title>
+  <link rel="stylesheet" href="css/style.css">
+  <meta name="theme-color" content="#3b82f6">
+</head>
+<body>
+
+  <!-- TOP NAVBAR -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon" style="background: linear-gradient(135deg, #3b82f6, #6366f1);">📊</div>
+      <div class="brand-info">
+        <h1 id="mgr-store-title">CENTRAL MANAGER DASHBOARD</h1>
+        <span style="color: #60a5fa;">REAL-TIME BILL MONITORING & ANTI-TAMPER AUDIT</span>
+      </div>
+    </div>
+
+    <div class="nav-status">
+      <!-- Live Server Time -->
+      <div style="font-size: 13px; color: var(--text-secondary); font-family: var(--font-mono);" id="live-clock">--:--:--</div>
+
+      <!-- Backup DB Shortcut -->
+      <a href="/api/backup/download" class="btn btn-secondary btn-sm" title="Download Database Backup">
+        💾 Backup DB
+      </a>
+
+      <!-- Link back to POS -->
+      <a href="index.html" class="btn btn-primary btn-sm">
+        ⚡ Open POS Terminal
+      </a>
+
+      <div class="user-badge">
+        <span>🛡️</span>
+        <span>Manager</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- DASHBOARD CONTAINER -->
+  <main class="manager-container">
+
+    <!-- NAVIGATION TABS -->
+    <nav class="tabs-nav">
+      <button class="tab-btn active" onclick="switchTab('dashboard')">📈 Live Overview</button>
+      <button class="tab-btn" onclick="switchTab('bills')">📑 All Bills & Reconciliation</button>
+      <button class="tab-btn" onclick="switchTab('inventory')">📦 Inventory Stock Upload</button>
+      <button class="tab-btn" onclick="switchTab('database')">🗄️ Open Database (डेटाबेस)</button>
+      <button class="tab-btn" onclick="switchTab('audit')">🛡️ Immutable Audit Logs</button>
+      <button class="tab-btn" onclick="switchTab('settings')">⚙️ Network & Store Settings</button>
+    </nav>
+
+    <!-- ============================================== -->
+    <!-- TAB 1: LIVE DASHBOARD OVERVIEW -->
+    <!-- ============================================== -->
+    <section id="tab-dashboard" class="tab-content">
+
+      <!-- FILTER ROW -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <label style="font-size: 13px; color: var(--text-secondary); font-weight: 600;">Date Filter:</label>
+          <input type="date" id="overview-date" class="input-control" style="width: 160px; padding: 6px 10px;" onchange="loadDashboardData()">
+          <button class="btn btn-secondary btn-sm" onclick="setFilterToday()">Today</button>
+        </div>
+
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-accent btn-sm" onclick="exportDailyExcel()">📥 Export Day Excel (.xlsx)</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadDashboardData()">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="kpi-grid">
+        <div class="kpi-card" style="border-left: 4px solid #3b82f6;">
+          <div class="kpi-title">Total Bills Generated</div>
+          <div class="kpi-value" id="kpi-total-bills">0</div>
+          <div class="kpi-sub" id="kpi-bills-sub">0 Completed | 0 Cancelled</div>
+        </div>
+
+        <div class="kpi-card" style="border-left: 4px solid #10b981;">
+          <div class="kpi-title">Total Net Sales</div>
+          <div class="kpi-value" style="color: #34d399;" id="kpi-total-sales">₹0.00</div>
+          <div class="kpi-sub" id="kpi-sales-mode-sub">Cash: ₹0 | UPI: ₹0 | Card: ₹0</div>
+        </div>
+
+        <div class="kpi-card" style="border-left: 4px solid #ef4444;">
+          <div class="kpi-title">Cancelled Bills</div>
+          <div class="kpi-value" style="color: #f87171;" id="kpi-cancelled-bills">0</div>
+          <div class="kpi-sub">Anti-Tamper: Logged with reason</div>
+        </div>
+
+        <div class="kpi-card" style="border-left: 4px solid #f59e0b;">
+          <div class="kpi-title">Main Software Entry Pending</div>
+          <div class="kpi-value" style="color: #fbbf24;" id="kpi-pending-reconcile">0</div>
+          <div class="kpi-sub">Needs entry in Tally/Busy/Marg</div>
+        </div>
+
+        <div class="kpi-card" style="border-left: 4px solid #f97316; cursor: pointer;" onclick="switchTab('inventory')">
+          <div class="kpi-title">Sold Without Stock (0 Stock)</div>
+          <div class="kpi-value" style="color: #fb923c;" id="kpi-oversold-summary">0 Items</div>
+          <div class="kpi-sub" id="kpi-oversold-sub">0 Pcs sold w/o stock</div>
+        </div>
+      </div>
+
+      <!-- CASHIER PERFORMANCE SUMMARY TABLE -->
+      <div class="card" style="margin-bottom: 24px;">
+        <div class="cart-header">
+          <h3 style="font-size: 16px;">👥 Cashier Performance Breakdown</h3>
+          <span style="font-size: 12px; color: var(--text-secondary);">Live aggregation across all mobile terminals</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Cashier Name</th>
+                <th>Counter / ID</th>
+                <th class="text-center">Generated Bills</th>
+                <th class="text-center">Cancelled</th>
+                <th class="text-right">Net Sales (₹)</th>
+                <th class="text-center">Main Software Entry Pending</th>
+              </tr>
+            </thead>
+            <tbody id="cashier-breakdown-tbody">
+              <tr><td colspan="6" style="text-align: center; padding: 20px;">Loading cashier statistics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RECENT BILLS PREVIEW -->
+      <div class="card">
+        <div class="cart-header">
+          <h3 style="font-size: 16px;">⚡ Recent Server Activity</h3>
+          <button class="btn btn-secondary btn-sm" onclick="switchTab('bills')">View All Bills →</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Bill No</th>
+                <th>Time</th>
+                <th>Cashier</th>
+                <th>Payment</th>
+                <th class="text-right">Grand Total</th>
+                <th>Status</th>
+                <th>Main Software</th>
+              </tr>
+            </thead>
+            <tbody id="recent-bills-tbody">
+              <tr><td colspan="7" style="text-align:center; padding: 20px;">Loading recent bills...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 2: ALL BILLS & RECONCILIATION -->
+    <!-- ============================================== -->
+    <section id="tab-bills" class="tab-content" style="display: none;">
+
+      <!-- FILTER & ACTIONS TOOLBAR -->
+      <div class="card" style="margin-bottom: 16px; padding: 12px;">
+        <div class="toolbar-filter-grid">
+          <input type="text" id="bills-filter-search" class="input-control" placeholder="Search Bill No, Mobile..." oninput="loadBillsTable()">
+          <input type="date" id="bills-filter-date" class="input-control" onchange="loadBillsTable()">
+          <select id="bills-filter-cashier" class="input-control" onchange="loadBillsTable()">
+            <option value="">All Cashiers</option>
+          </select>
+          <select id="bills-filter-status" class="input-control" onchange="loadBillsTable()">
+            <option value="">All Status</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+          <select id="bills-filter-main" class="input-control" onchange="loadBillsTable()">
+            <option value="">Main Software (All)</option>
+            <option value="PENDING">Pending Entry</option>
+            <option value="ENTERED">Entered (Done)</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="resetBillsFilter()">Reset</button>
+          <button class="btn btn-accent btn-sm" onclick="exportDailyExcel()">📥 Export Excel (.xlsx)</button>
+          <button class="btn btn-danger btn-sm" onclick="clearAllBillsForLive()" title="Wipe test invoices to start live billing fresh">🧹 Clear Invoices (Live Reset)</button>
+        </div>
+      </div>
+
+      <!-- BILLS TABLE -->
+      <div class="card">
+        <div class="cart-header">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <h3 style="font-size: 16px;">Bills List (<span id="bills-table-count">0</span>)</h3>
+            <button class="btn btn-primary btn-sm" onclick="bulkMarkReconciled()">✓ Mark Selected as Entered</button>
+          </div>
+          <span style="font-size: 12px; color: var(--text-secondary);">Immutable Database Ledger</span>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th style="width: 30px;"><input type="checkbox" id="select-all-bills" onclick="toggleSelectAllBills(this)"></th>
+                <th>Bill No</th>
+                <th>Date & Time</th>
+                <th>Cashier</th>
+                <th>Device</th>
+                <th>Mode</th>
+                <th class="text-right">Grand Total</th>
+                <th>Status</th>
+                <th>Main Software Status</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody id="all-bills-tbody">
+              <tr><td colspan="10" style="text-align: center; padding: 30px;">Loading bills...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 3: INVENTORY STOCK UPLOAD (EXCEL, CSV, JSON) -->
+    <!-- ============================================== -->
+    <section id="tab-inventory" class="tab-content" style="display: none;">
+
+      <div class="grid-responsive-2" style="margin-bottom: 20px;">
+        
+        <!-- UPLOAD CARD -->
+        <div class="card">
+          <div class="cart-header">
+            <h3 style="font-size: 16px;">📤 Upload Stock Catalog (Excel / CSV / JSON)</h3>
+            <a href="/api/products/sample-template" class="btn btn-secondary btn-sm">📥 Sample Template</a>
+          </div>
+
+          <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+            Upload your product inventory file to immediately update prices, barcodes, and stock across all cashier mobile terminals.
+          </p>
+
+          <div class="dropzone" id="file-dropzone" onclick="document.getElementById('inventory-file-input').click()">
+            <div style="font-size: 36px; margin-bottom: 8px;">📁</div>
+            <div style="font-weight: 600; font-size: 15px;">Click to Select or Drag & Drop File</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">Supports: .xlsx, .xls, .csv, .json</div>
+            <div id="selected-file-name" style="margin-top: 10px; font-weight: 700; color: #34d399;"></div>
+          </div>
+          <input type="file" id="inventory-file-input" style="display: none;" accept=".xlsx,.xls,.csv,.json" onchange="handleFileSelect(event)">
+
+          <div style="margin-top: 16px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <label style="font-size: 13px; color: var(--text-secondary);">
+              <input type="radio" name="upload-mode" value="upsert" checked> <strong>Update & Add (Recommended)</strong>
+            </label>
+            <label style="font-size: 13px; color: var(--text-secondary);">
+              <input type="radio" name="upload-mode" value="replace"> <strong style="color: var(--danger);">Replace All</strong>
+            </label>
+          </div>
+
+          <button class="btn btn-primary btn-lg" style="width: 100%; margin-top: 16px;" id="btn-upload-inventory" onclick="uploadInventoryFile()">
+            🚀 Start Stock Upload
+          </button>
+        </div>
+
+        <!-- QUICK ADD PRODUCT MANUALLY -->
+        <div class="card">
+          <div class="cart-header">
+            <h3 style="font-size: 16px;">➕ Add Single Item Manually</h3>
+          </div>
+          <form id="single-product-form" onsubmit="handleManualProductAdd(event)">
+            <div class="grid-responsive-2" style="margin-bottom: 10px;">
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">Item Code / Barcode *</label>
+                <input type="text" id="m-code" class="input-control" required placeholder="e.g. 890103001">
+              </div>
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">Item Name *</label>
+                <input type="text" id="m-name" class="input-control" required placeholder="e.g. Tata Salt 1kg">
+              </div>
+            </div>
+            <div class="grid-responsive-3" style="margin-bottom: 10px;">
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">Category</label>
+                <input type="text" id="m-category" class="input-control" placeholder="Grocery">
+              </div>
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">Sale Price (₹) *</label>
+                <input type="number" step="0.01" id="m-price" class="input-control" required placeholder="28.00">
+              </div>
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">Initial Stock</label>
+                <input type="number" id="m-stock" class="input-control" value="100">
+              </div>
+            </div>
+            <button type="submit" class="btn btn-secondary" style="width: 100%; margin-top: 10px;">Save Product to Database</button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- OVERSOLD / SOLD WITHOUT STOCK TRACKER -->
+      <div class="card" id="oversold-section" style="margin-bottom: 20px; border: 1px solid #f59e0b;">
+        <div class="cart-header">
+          <div>
+            <h3 style="font-size: 16px; color: #fbbf24;">🚨 Sold Without Stock Tracker (शून्य स्टॉक में बिके सामान)</h3>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              Items billed when recorded stock was 0 or negative. Use this list to restock shelves and update your physical count!
+            </p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadOversoldReport()">🔄 Refresh Oversold</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Item Code</th>
+                <th>Product Name</th>
+                <th>Category</th>
+                <th class="text-right">Rate (₹)</th>
+                <th class="text-center" style="color: #fb923c; font-weight:700;">Pcs Sold w/o Stock</th>
+                <th class="text-center" style="color: var(--danger); font-weight:700;">Current Negative Stock</th>
+                <th class="text-center">Bills Count</th>
+                <th class="text-center">Quick Restock / Fix</th>
+              </tr>
+            </thead>
+            <tbody id="oversold-tbody">
+              <tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No oversold items. All sales matched available stock!</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CURRENT PRODUCT CATALOG TABLE -->
+      <div class="card">
+        <div class="cart-header">
+          <h3 style="font-size: 16px;">📦 Active Inventory Catalog (<span id="prod-total-count">0</span> items)</h3>
+          <input type="text" id="prod-search-input" class="input-control" placeholder="Search barcode or name..." style="width: 280px;" oninput="loadProductCatalog()">
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Barcode / Code</th>
+                <th>Item Name</th>
+                <th>Category</th>
+                <th class="text-right">Sale Price (₹)</th>
+                <th class="text-right">Available Stock</th>
+                <th>Unit</th>
+                <th>Updated</th>
+              </tr>
+            </thead>
+            <tbody id="catalog-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 4: IMMUTABLE AUDIT LOGS -->
+    <!-- ============================================== -->
+    <section id="tab-audit" class="tab-content" style="display: none;">
+      <div class="card">
+        <div class="cart-header">
+          <div>
+            <h3 style="font-size: 16px;">🛡️ Immutable Anti-Tampering Audit Trail</h3>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              Append-only security log. Records all logins, cancellations, price overrides, and stock updates. Normal users cannot alter these records.
+            </p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadAuditLogs()">🔄 Refresh Logs</button>
+        </div>
+
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Log ID</th>
+                <th>Date & Time</th>
+                <th>Event Type</th>
+                <th>User / Cashier</th>
+                <th>Device ID</th>
+                <th>Reference ID</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody id="audit-logs-tbody">
+              <tr><td colspan="7" style="text-align: center; padding: 20px;">Loading audit events...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 5: SETTINGS & NETWORK / CASHIER CONFIG -->
+    <!-- ============================================== -->
+    <section id="tab-settings" class="tab-content" style="display: none;">
+      <div class="grid-responsive-2">
+        
+        <!-- STORE SETTINGS -->
+        <div class="card">
+          <div class="cart-header">
+            <h3 style="font-size: 16px;">🏪 Store Information & Bill Header</h3>
+          </div>
+          <form id="store-settings-form" onsubmit="saveStoreSettings(event)">
+            <div style="margin-bottom: 10px;">
+              <label style="font-size: 12px; color: var(--text-secondary);">Supermarket / Store Name:</label>
+              <input type="text" id="cfg-store-name" class="input-control" required>
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="font-size: 12px; color: var(--text-secondary);">Receipt Tagline:</label>
+              <input type="text" id="cfg-store-tagline" class="input-control">
+            </div>
+            <div style="margin-bottom: 10px;">
+              <label style="font-size: 12px; color: var(--text-secondary);">Store Address:</label>
+              <input type="text" id="cfg-store-address" class="input-control">
+            </div>
+            <div class="grid-responsive-2" style="margin-bottom: 10px;">
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">Phone Number:</label>
+                <input type="text" id="cfg-store-phone" class="input-control">
+              </div>
+              <div>
+                <label style="font-size: 12px; color: var(--text-secondary);">GSTIN No:</label>
+                <input type="text" id="cfg-store-gstin" class="input-control">
+              </div>
+            </div>
+            <div style="margin-bottom: 14px;">
+              <label style="font-size: 12px; color: var(--text-secondary);">Thermal Receipt Footer:</label>
+              <input type="text" id="cfg-receipt-footer" class="input-control">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Save Store Settings</button>
+          </form>
+        </div>
+
+        <!-- WI-FI & CASHIER MOBILE QR CODE -->
+        <div class="card">
+          <div class="cart-header">
+            <h3 style="font-size: 16px;">📱 Local Wi-Fi Connection & Mobile QR</h3>
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px;">
+            Connect all cashier mobile devices to your store's Wi-Fi router (no internet required).
+            Cashiers simply open this URL in Chrome:
+          </div>
+
+          <div style="background: var(--bg-input); border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; font-family: var(--font-mono); font-size: 16px; color: #34d399; margin-bottom: 14px; text-align: center;" id="network-mobile-url">
+            http://localhost:3000
+          </div>
+
+          <!-- SYSTEM INFO SPECS -->
+          <div style="font-size: 12px; line-height: 1.8; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 10px;">
+            <div><strong>Central Database:</strong> SQLite (<code>quickbill.db</code>)</div>
+            <div><strong>Offline Sync Mode:</strong> Auto-reconnect with duplicate idempotency</div>
+            <div><strong>Backup Strategy:</strong> 1-click snapshot or copy <code>quickbill.db</code></div>
+          </div>
+
+          <div style="margin-top: 16px;">
+            <a href="/api/backup/download" class="btn btn-secondary" style="width: 100%;">
+              💾 Download Full Database Backup (.db)
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- TAB 6: OPEN DATABASE MANAGER & SQL EXPLORER -->
+    <!-- ============================================== -->
+    <section id="tab-database" class="tab-content" style="display: none;">
+      
+      <!-- DATABASE CONNECTION STATUS BANNER -->
+      <div class="card" style="margin-bottom: 20px; border-left: 5px solid #10b981;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="status-dot" style="color: #10b981; font-size: 18px;">●</span>
+              <h2 style="font-size: 18px; color: #34d399;">Open Database Connected: SQLite (quickbill.db)</h2>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;" id="db-connection-details">
+              Engine: SQLite 3 | Mode: WAL Concurrency | File: quickbill.db
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-primary btn-sm" onclick="testDatabaseConnection()">⚡ Test Connection</button>
+            <a href="/api/backup/download" class="btn btn-secondary btn-sm">💾 Download .db File</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABLES OVERVIEW GRID -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="cart-header">
+          <h3 style="font-size: 16px;">📊 Database Tables & Record Counts</h3>
+          <span style="font-size: 12px; color: var(--text-secondary);">Click any table to browse live records</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;" id="db-tables-grid">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- TABLE DATA BROWSER -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div class="cart-header">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h3 style="font-size: 16px;">🔍 Table Browser: <span id="browsing-table-name" style="color: #60a5fa;">products</span></h3>
+            <select id="select-active-table" class="input-control" style="width: 160px; padding: 4px 8px;" onchange="browseTable(this.value)">
+              <option value="products">products</option>
+              <option value="bills">bills</option>
+              <option value="bill_items">bill_items</option>
+              <option value="audit_logs">audit_logs</option>
+              <option value="users">users</option>
+              <option value="app_settings">app_settings</option>
+            </select>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary);" id="table-browse-summary">
+            Showing latest records
+          </div>
+        </div>
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;" id="table-browser-container">
+          <!-- Table data rendered here -->
+        </div>
+      </div>
+
+      <!-- INTERACTIVE SQL QUERY RUNNER -->
+      <div class="card">
+        <div class="cart-header">
+          <h3 style="font-size: 16px;">💻 Interactive SQL Query Runner</h3>
+          <span style="font-size: 12px; color: var(--text-secondary);">Run direct SQL against quickbill.db</span>
+        </div>
+        <div style="margin-bottom: 10px;">
+          <textarea id="sql-query-input" class="input-control" rows="3" style="font-family: var(--font-mono); font-size: 13px;" placeholder="SELECT name, price, stock_qty FROM products WHERE stock_qty > 0 LIMIT 10;">SELECT name, price, stock_qty FROM products WHERE stock_qty > 0 LIMIT 10;</textarea>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="setQueryExample('stock')">Sample: Active Stock</button>
+            <button class="btn btn-secondary btn-sm" onclick="setQueryExample('bills')">Sample: Recent Bills</button>
+            <button class="btn btn-secondary btn-sm" onclick="setQueryExample('oversold')">Sample: Zero Stock Sales</button>
+          </div>
+          <button class="btn btn-primary" onclick="runCustomSqlQuery()">▶ Run SQL Query</button>
+        </div>
+        <div id="sql-query-results" style="margin-top: 14px; max-height: 350px; overflow-y: auto;"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- BILL DETAILS & CANCELLATION MODAL -->
+  <div class="modal-overlay" id="bill-detail-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="modal-bill-title">Bill Details</h3>
+        <button class="btn btn-secondary btn-sm" onclick="closeBillDetailModal()">✕</button>
+      </div>
+      <div id="modal-bill-content"></div>
+      
+      <!-- MODAL ACTION BUTTONS (PDF + WHATSAPP + PRINT) -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+        <button class="btn btn-secondary btn-sm" style="background: #25D366; color: white; border: none; font-weight: 700;" onclick="shareManagerBillWhatsApp()">📲 Share PDF Invoice on WhatsApp</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="downloadManagerBillPDF()">📄 Download PDF</button>
+          <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="printManagerBill()">🖨️ Thermal Print</button>
+        </div>
+      </div>
+
+      <!-- CANCELLATION BOX (IF NOT ALREADY CANCELLED) -->
+      <div id="cancellation-box" style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+        <label style="font-size: 12px; color: var(--danger); font-weight: 600;">Cancel this Bill (Mandatory Reason):</label>
+        <input type="text" id="cancel-reason-input" class="input-control" placeholder="Enter reason e.g. Customer returned items" style="margin: 6px 0;">
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-danger btn-sm" onclick="submitBillCancellation()">Confirm Cancellation & Restore Stock</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="js/pdf-generator.js"></script>
+  <script src="js/print.js"></script>
+  <script src="js/manager.js"></script>
+</body>
+</html>

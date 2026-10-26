@@ -1,0 +1,110 @@
+[
+  {
+    "item_code": "890103001",
+    "name": "Fortune Sunlite Refined Oil 1L",
+    "category": "Cooking Oils",
+    "price": 140,
+    "stock_qty": 75,
+    "unit": "Pouch",
+    "tax_percent": 5
+  },
+  {
+    "item_code": "890103002",
+    "name": "Aashirvaad Shudh Chakki Atta 10kg",
+    "category": "Staples",
+    "price": 420,
+    "stock_qty": 35,
+    "unit": "Bag",
+    "tax_percent": 0
+  },
+  {
+    "item_code": "890103003",
+    "name": "Tata Tea Gold 500g",
+    "category": "Tea & Coffee",
+    "price": 280,
+    "stock_qty": 60,
+    "unit": "Pkt",
+    "tax_percent": 5
+  },
+  {
+    "item_code": "890103004",
+    "name": "Daawat Rozana Basmati Rice 5kg",
+    "category": "Rice",
+    "price": 399,
+    "stock_qty": 40,
+    "unit": "Bag",
+    "tax_percent": 0
+  },
+  {
+    "item_code": "890103005",
+    "name": "Amul Butter 500g",
+    "category": "Dairy",
+    "price": 275,
+    "stock_qty": 50,
+    "unit": "Pack",
+    "tax_percent": 12
+  },
+  {
+    "item_code": "890103006",
+    "name": "Colgate Strong Teeth 200g",
+    "category": "Oral Care",
+    "price": 115,
+    "stock_qty": 90,
+    "unit": "Pcs",
+    "tax_percent": 18
+  },
+  {
+    "item_code": "890103007",
+    "name": "Vim Dishwash Bar 300g",
+    "category": "Household",
+    "price": 25,
+    "stock_qty": 150,
+    "unit": "Pcs",
+    "tax_percent": 18
+  },
+  {
+    "item_code": "890103008",
+    "name": "Haldiram Bhujia Sev 400g",
+    "category": "Snacks",
+    "price": 110,
+    "stock_qty": 85,
+    "unit": "Pkt",
+    "tax_percent": 12
+  },
+  {
+    "item_code": "890103009",
+    "name": "Catch Coriander Powder 200g",
+    "category": "Spices",
+    "price": 65,
+    "stock_qty": 80,
+    "unit": "Box",
+    "tax_percent": 5
+  },
+  {
+    "item_code": "890103010",
+    "name": "Britannia Good Day Cashew 200g",
+    "category": "Biscuits",
+    "price": 45,
+    "stock_qty": 120,
+    "unit": "Pkt",
+    "tax_percent": 18
+  },
+  {
+    "item_code": "890103011",
+    "name": "Dettol Original Handwash 200ml Refill",
+    "category": "Personal Care",
+    "price": 89,
+    "stock_qty": 70,
+    "unit": "Pouch",
+    "tax_percent": 18
+  },
+  {
+    "item_code": "890103012",
+    "name": "Kissan Fresh Tomato Ketchup 1kg",
+    "category": "Sauces",
+    "price": 135,
+    "stock_qty": 45,
+    "unit": "Bottle",
+    "tax_percent": 12
+  }
+]

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>QuickBill - Emergency POS Billing</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10b981">
+</head>
+<body class="pos-body">
+
+  <!-- TOP NAVBAR -->
+  <header class="navbar">
+    <div class="brand">
+      <div class="brand-icon">⚡</div>
+      <div class="brand-info">
+        <h1 id="store-title">DAFTARI MEGA MART</h1>
+        <span>EMERGENCY POS</span>
+      </div>
+    </div>
+
+    <div class="nav-status">
+      <!-- Central Server Connection Indicator -->
+      <div id="server-status" class="badge-status badge-offline" title="Central Server Status">
+        <span class="status-dot">●</span>
+        <span id="server-status-text">Checking Server...</span>
+      </div>
+
+      <!-- Pending Offline Bills Badge -->
+      <div id="pending-badge" class="badge-status badge-sync" style="display:none;" onclick="showPendingModal()">
+        <span>⚡</span>
+        <span id="pending-count">0 Sync</span>
+      </div>
+
+      <!-- Cashier User Badge -->
+      <div class="user-badge" id="nav-user-badge">
+        <span>👤</span>
+        <span id="current-user-name">Cashier</span>
+        <button class="btn btn-secondary btn-sm nav-logout-btn" onclick="logoutCashier()" title="Logout" style="margin-left: 4px; padding: 2px 5px;">🚪</button>
+      </div>
+
+      <!-- Settings / Link to Manager -->
+      <a href="manager.html" class="btn btn-secondary btn-sm nav-mgr-link" title="Manager Dashboard">📊 Dashboard</a>
+    </div>
+  </header>
+
+  <!-- POS MAIN SCREEN -->
+  <main class="pos-layout">
+
+    <!-- LEFT COLUMN: SEARCH & CART -->
+    <section class="pos-main">
+
+      <!-- SEARCH & SCANNER INPUT BAR -->
+      <div class="card" style="padding: 10px;">
+        <div class="search-bar-row">
+          <div class="input-group">
+            <input type="text" id="item-search" class="input-control" placeholder="🔍 Scan Barcode or Type Product Name (F2)..." autocomplete="off" autofocus>
+            <div id="search-results" class="search-results-dropdown"></div>
+          </div>
+          <button class="btn btn-secondary" onclick="openScannerModal()" title="Open Camera Scanner">📷 Scan</button>
+          <button class="btn btn-secondary" onclick="openServerConfigModal()" title="Server IP Settings">⚙️</button>
+        </div>
+
+        <!-- CATEGORY QUICK FILTER CHIPS -->
+        <div class="category-pills" id="category-pills" style="margin-top: 10px;">
+          <div class="cat-pill active" onclick="filterCategory('ALL')">All Items</div>
+          <div class="cat-pill" onclick="filterCategory('Grocery')">Grocery</div>
+          <div class="cat-pill" onclick="filterCategory('Dairy')">Dairy</div>
+          <div class="cat-pill" onclick="filterCategory('Staples')">Staples</div>
+          <div class="cat-pill" onclick="filterCategory('Snacks')">Snacks</div>
+          <div class="cat-pill" onclick="filterCategory('Beverages')">Beverages</div>
+        </div>
+      </div>
+
+      <!-- CART TABLE -->
+      <div class="card cart-card">
+        <div class="cart-header">
+          <div style="font-weight: 700; font-size: 15px;">
+            🛒 Current Bill Items (<span id="cart-item-count">0</span>)
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary btn-sm" onclick="holdCurrentCart()" title="Hold Cart">⏸️ Hold</button>
+            <button class="btn btn-danger btn-sm" onclick="clearCart()" title="Clear Entire Cart">🗑️ Clear</button>
+          </div>
+        </div>
+
+        <div class="cart-table-wrapper">
+          <table class="cart-table">
+            <thead>
+              <tr>
+                <th style="width: 40%;">Item</th>
+                <th style="width: 18%;" class="text-right">Price</th>
+                <th style="width: 22%;" class="text-center">Qty</th>
+                <th style="width: 15%;" class="text-right">Total</th>
+                <th style="width: 5%;"></th>
+              </tr>
+            </thead>
+            <tbody id="cart-table-body">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px 10px;">
+                  Cart is empty. Scan barcode or type above to add items.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: BILL TOTAL & SETTLEMENT -->
+    <aside class="pos-sidebar">
+
+      <!-- MOBILE DRAWER CLOSE / HEADER (VISIBLE ON MOBILE ONLY) -->
+      <div class="mobile-sidebar-header">
+        <div style="font-weight: 700; font-size: 16px; color: var(--text-primary); display: flex; align-items: center; gap: 6px;">
+          <span>💳</span> Settle Bill
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="closeMobileCheckout()" style="padding: 4px 10px; font-weight: 700;">
+          ✕ Back to Cart
+        </button>
+      </div>
+
+      <!-- BIG GRAND TOTAL DISPLAY -->
+      <div class="grand-total-banner">
+        <div class="grand-total-label">Grand Total</div>
+        <div class="grand-total-amount" id="display-grand-total">₹0.00</div>
+        <div style="font-size: 11px; color: #a7f3d0;" id="total-items-desc">0 Items in cart</div>
+      </div>
+
+      <!-- BILL FINANCIAL SUMMARY -->
+      <div class="card">
+        <div class="summary-rows">
+          <div class="summary-row">
+            <span>Subtotal:</span>
+            <span id="summary-subtotal">₹0.00</span>
+          </div>
+          <div class="summary-row">
+            <span>Bill Discount (₹):</span>
+            <input type="number" id="bill-discount" class="input-control" style="width: 90px; padding: 4px 8px; font-size: 13px; text-align: right;" value="0" min="0" oninput="calculateTotals()">
+          </div>
+          <div class="summary-row">
+            <span>GST / Tax:</span>
+            <span id="summary-tax">₹0.00</span>
+          </div>
+        </div>
+
+        <hr style="border-color: var(--border-color); margin: 10px 0;">
+
+        <!-- CUSTOMER MOBILE (OPTIONAL) -->
+        <div style="margin-bottom: 10px;">
+          <input type="tel" id="customer-phone" class="input-control" placeholder="📱 Customer Mobile No (Optional)" maxlength="10">
+        </div>
+
+        <!-- PAYMENT MODE SELECTOR -->
+        <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">
+          PAYMENT MODE:
+        </div>
+        <div class="payment-selector">
+          <button class="pay-btn active" id="pay-cash-btn" onclick="setPaymentMode('CASH')">
+            <span>💵</span>
+            <span>CASH</span>
+          </button>
+          <button class="pay-btn" id="pay-upi-btn" onclick="setPaymentMode('UPI')">
+            <span>📲</span>
+            <span>UPI / QR</span>
+          </button>
+          <button class="pay-btn" id="pay-card-btn" onclick="setPaymentMode('CARD')">
+            <span>💳</span>
+            <span>CARD</span>
+          </button>
+        </div>
+
+        <!-- CASH TENDER & CHANGE CALCULATION (VISIBLE FOR CASH) -->
+        <div id="cash-tender-box">
+          <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); margin-top: 6px;">
+            CASH TENDERED:
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <input type="number" id="cash-tendered-input" class="input-control" placeholder="Received Amount" oninput="calculateChange()">
+          </div>
+          <div class="tender-chips">
+            <button class="tender-chip" onclick="tenderExact()">Exact</button>
+            <button class="tender-chip" onclick="tenderAdd(100)">₹100</button>
+            <button class="tender-chip" onclick="tenderAdd(200)">₹200</button>
+            <button class="tender-chip" onclick="tenderAdd(500)">₹500</button>
+            <button class="tender-chip" onclick="tenderAdd(2000)">₹2000</button>
+          </div>
+          <div class="summary-row" style="margin-top: 8px; font-size: 15px; font-weight: 700;">
+            <span style="color: var(--warning);">Change Return:</span>
+            <span id="change-returned-display" style="color: #34d399;">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- ACTION BUTTONS -->
+        <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 10px;">
+          <button class="btn btn-primary btn-lg" id="btn-complete-bill" onclick="completeBill()">
+            ⚡ COMPLETE BILL (Enter)
+          </button>
+        </div>
+
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- MOBILE CHECKOUT BACKDROP -->
+  <div class="pos-backdrop" id="pos-backdrop" onclick="closeMobileCheckout()"></div>
+
+  <!-- MOBILE FLOATING BOTTOM BAR (VISIBLE ON MOBILE ONLY) -->
+  <div class="mobile-bottom-bar" id="mobile-bottom-bar">
+    <div class="mobile-total-info">
+      <span class="mobile-total-label">TOTAL (<span id="mobile-cart-count">0</span> items):</span>
+      <span class="mobile-total-amount" id="mobile-grand-total">₹0.00</span>
+    </div>
+    <button class="btn btn-primary btn-lg" onclick="openMobileCheckout()" style="padding: 10px 18px; border-radius: 8px; font-weight: 700;">
+      ⚡ PAY / BILL →
+    </button>
+  </div>
+
+  <!-- CASHIER LOGIN MODAL -->
+  <div class="modal-overlay" id="login-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 380px;">
+      <div class="modal-header">
+        <h3 style="font-size: 18px;">🔐 Cashier Login</h3>
+      </div>
+      <form id="login-form" onsubmit="handleLoginSubmit(event)">
+        <div style="margin-bottom: 12px;">
+          <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Select Counter / User ID:</label>
+          <select id="login-username" class="input-control" required>
+            <option value="cashier1">Cashier A (Counter 1)</option>
+            <option value="cashier2">Cashier B (Counter 2)</option>
+            <option value="cashier3">Cashier C (Counter 3)</option>
+            <option value="admin">Store Manager (Admin)</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Security PIN:</label>
+          <input type="password" id="login-pin" class="input-control" placeholder="Enter PIN (Default: 1234)" required autocomplete="current-password" inputmode="numeric">
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Default PIN: 1234 (Manager: 9999)</div>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" style="width: 100%;">🚀 Login to Billing</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- SERVER CONNECTION CONFIG MODAL (FOR GITHUB PAGES OR LAN IP) -->
+  <div class="modal-overlay" id="server-config-modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📡 Central Server IP Settings</h3>
+        <button class="btn btn-secondary btn-sm" onclick="closeServerConfigModal()">✕</button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        If using GitHub Pages, enter the local Windows PC Server IP (e.g. <code>http://192.168.0.107:3000</code>).
+      </p>
+      <div style="margin-bottom: 14px;">
+        <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Local Server URL:</label>
+        <input type="text" id="server-url-input" class="input-control" placeholder="http://192.168.0.107:3000">
+      </div>
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn btn-secondary" onclick="closeServerConfigModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveServerConfig()">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PENDING OFFLINE BILLS MODAL -->
+  <div class="modal-overlay" id="pending-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3>⚡ Pending Offline Bills (<span id="pending-modal-count">0</span>)</h3>
+        <button class="btn btn-secondary btn-sm" onclick="closePendingModal()">✕</button>
+      </div>
+      <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+        These bills were generated during power/Wi-Fi downtime and are saved safely in device storage. They will be uploaded to the central database immediately upon clicking Sync.
+      </div>
+      <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Offline ID</th>
+              <th>Time</th>
+              <th>Items</th>
+              <th>Grand Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="pending-bills-tbody"></tbody>
+        </table>
+      </div>
+      <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 12px; color: var(--warning);">Duplicate sync protection active.</div>
+        <button class="btn btn-primary" onclick="syncPendingNow()">🔄 Sync All to Server Now</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RECEIPT MODAL -->
+  <div class="modal-overlay" id="receipt-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 420px;">
+      <div class="modal-header">
+        <h3>🧾 Bill Generated</h3>
+        <button class="btn btn-secondary btn-sm" onclick="closeReceiptModal()">✕</button>
+      </div>
+      <div id="receipt-preview-container" style="background: white; color: black; padding: 12px; border-radius: 6px; font-family: monospace;"></div>
+      
+      <!-- INVOICE ACTION BUTTONS (PDF + WHATSAPP + PRINT) -->
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 14px;">
+        <button class="btn btn-secondary btn-lg" style="background: #25D366; color: white; border: none; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="shareReceiptWhatsAppPDF()">
+          <span style="font-size: 18px;">📲</span> Share PDF Invoice on WhatsApp
+        </button>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+          <button class="btn btn-primary" onclick="downloadActiveReceiptPDF()">
+            📄 Download PDF
+          </button>
+          <button class="btn btn-secondary" onclick="viewActiveReceiptPDF()">
+            👁️ View PDF
+          </button>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" style="flex: 1;" onclick="printActiveReceipt()">
+            🖨️ Thermal Print
+          </button>
+          <button class="btn btn-secondary" onclick="closeReceiptModal()">
+            Done (F2)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMERA SCANNER MODAL -->
+  <div class="modal-overlay" id="scanner-modal" style="display: none;">
+    <div class="modal-content" style="max-width: 440px; text-align: center; padding: 16px;">
+      <div class="modal-header">
+        <h3 style="font-size: 16px;">📷 Barcode Scanner</h3>
+        <button class="btn btn-secondary btn-sm" onclick="closeScannerModal()">✕</button>
+      </div>
+
+      <!-- SCANNER CONTAINER -->
+      <div id="camera-reader-container" style="position: relative; width: 100%; min-height: 220px; background: #000; border-radius: 8px; overflow: hidden; margin-bottom: 12px; display: flex; align-items: center; justify-content: center;">
+        <div id="reader" style="width: 100%;"></div>
+        <div id="camera-loading" style="color: #94a3b8; font-size: 13px; padding: 20px;">
+          Starting camera...
+        </div>
+      </div>
+
+      <!-- CAMERA BUTTONS: SNAP (HTTP SAFE) & LIVE STREAM -->
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <button class="btn btn-primary" style="flex: 1.2; padding: 12px; font-weight: 700;" onclick="triggerCameraSnap()">
+          📸 Snap Photo (100% Mobile Safe)
+        </button>
+        <button class="btn btn-secondary" id="btn-toggle-live" style="flex: 0.8;" onclick="toggleLiveCamera()">
+          📹 Live Video
+        </button>
+      </div>
+      <input type="file" id="camera-snap-input" accept="image/*" capture="environment" style="display: none;" onchange="handleCameraSnap(event)">
+
+      <div id="camera-status-msg" style="font-size: 12px; color: #a7f3d0; margin-bottom: 10px; line-height: 1.4;">
+        Point phone camera at barcode or tap "Snap Photo".
+      </div>
+
+      <!-- MANUAL ENTRY -->
+      <div style="display: flex; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 10px;">
+        <input type="text" id="manual-barcode-input" class="input-control" placeholder="Or type Barcode number...">
+        <button class="btn btn-secondary" onclick="submitManualBarcode()">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="js/html5-qrcode.min.js"></script>
+  <script src="js/db-sync.js"></script>
+  <script src="js/pdf-generator.js"></script>
+  <script src="js/print.js"></script>
+  <script src="js/pos.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW registration:', e));
+    }
+  </script>
+</body>
+</html>

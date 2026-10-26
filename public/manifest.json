@@ -1,0 +1,16 @@
+{
+  "name": "QuickBill Emergency POS",
+  "short_name": "QuickBill",
+  "description": "High-Speed Emergency Billing POS for Supermarkets",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
