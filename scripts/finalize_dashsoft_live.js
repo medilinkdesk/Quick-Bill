@@ -3,7 +3,7 @@
  * QuickBill POS - DAFTARI MEGA MART (Kishanganj)
  */
 
-const { db, logAudit } = require('./db.js');
+const { db, logAudit } = require('../db.js');
 
 console.log('=====================================================');
 console.log('🚀 FINALIZING DASH SOFT STOCK & INITIALIZING FOR LIVE');
@@ -18,9 +18,6 @@ for (const code of dummyCodes) {
 console.log('✅ Removed non-DashSoft sample test products.');
 
 // 2. Restore stock for any DashSoft products touched in test bills
-// In test bills:
-// - 02073708261 (KELLOGGS FROOT LOOPS): Original stock in CSV was 1.00
-// - 02063910261 (RAMSILA MINIKET - 26KG): Original stock in CSV was 20.00
 db.prepare('UPDATE products SET stock_qty = 1.00 WHERE item_code = ?').run('02073708261');
 db.prepare('UPDATE products SET stock_qty = 20.00 WHERE item_code = ?').run('02063910261');
 console.log('✅ Restored stock levels for items sold in test bills.');

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const readline = require('readline');
 const path = require('path');
-const { db, initDatabase, logAudit } = require('./db.js');
+const { db, initDatabase, logAudit } = require('../db.js');
 
 initDatabase();
 
@@ -16,14 +16,19 @@ db.exec(`
 // Update store settings for Daftari Mega Mart
 const setSetting = db.prepare('INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)');
 setSetting.run('store_name', 'DAFTARI MEGA MART');
-setSetting.run('store_tagline', 'Supermarket & Retail - Emergency POS');
-setSetting.run('store_address', 'Neemchand Road, Kishanganj, Bihar');
+setSetting.run('store_tagline', 'Complete Family Supermarket & Retail');
+setSetting.run('store_address', 'Neemchand Road, Kishanganj - 855107');
 setSetting.run('store_phone', '+91 79706 05281');
 setSetting.run('store_gstin', '10AAHCD2963P1ZG');
-setSetting.run('receipt_footer', 'Thank You for shopping at Daftari Mega Mart!');
+setSetting.run('receipt_footer', 'Thank You for shopping at Daftari Mega Mart! Visit Again.');
 
-const csvPath = path.join(__dirname, '3030_Current_St_ock_Detail_39_2026_10_25_120815.csv');
+const csvPath = path.join(__dirname, '..', '3030_Current_St_ock_Detail_39_2026_10_25_120815.csv');
 console.log('Starting Daftari Mega Mart stock import from:', csvPath);
+
+if (!fs.existsSync(csvPath)) {
+  console.error('Error: CSV file not found at:', csvPath);
+  process.exit(1);
+}
 
 const stream = fs.createReadStream(csvPath);
 const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });

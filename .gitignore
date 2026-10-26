@@ -1,1 +1,37 @@
-3030_Current_St_ock_Detail_39_2026_10_25_120815.csv
+# ==========================================
+# QUICKBILL - GITIGNORE CONFIGURATION
+# ==========================================
+
+# 1. Dependencies (Restore via 'npm install')
+node_modules/
+
+# 2. SQLite Live Database & WAL/SHM Locks (Keeps repo under GitHub 100MB file limit)
+quickbill.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# 3. Large Raw Master Stock Dumps (> 50MB)
+*.csv
+!sample_data/*.csv
+
+# 4. Uploads Directory (Keep folder via .gitkeep, ignore uploaded files)
+uploads/*
+!uploads/.gitkeep
+
+# 5. Runtime Logs & System Dumps
+*.log
+npm-debug.log*
+
+# 6. Operating System & IDE Cache
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# 7. Environment & Secrets
+.env
+.env.local

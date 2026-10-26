@@ -1,14 +1,22 @@
 {
   "name": "quick-bill",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "QuickBill - Emergency Supermarket POS & Central Local Server (Daftari Mega Mart)",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "import-stock": "node scripts/import_daftari_stock.js",
+    "reset-live": "node scripts/finalize_dashsoft_live.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "pos",
+    "supermarket",
+    "emergency-billing",
+    "sqlite",
+    "offline-first",
+    "pwa"
+  ],
+  "author": "Daftari Mega Mart",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
