@@ -72,6 +72,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   setupKeyboardShortcuts();
   setupSearchEvents();
   updatePendingBadge();
+
+  // If opened on GitHub Pages and no Server URL configured yet, prompt cashier automatically
+  if (window.location.hostname.includes('github.io') && !localStorage.getItem('qb_server_url')) {
+    setTimeout(() => {
+      openServerConfigModal();
+    }, 600);
+  }
 });
 
 // Authentication Handling
